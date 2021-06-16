@@ -31,6 +31,8 @@
 #include <LibGUI/Toolbar.h>
 #include <LibGUI/Window.h>
 #include <LibGfx/Bitmap.h>
+#include <LibGfx/Filters/ColorInvertingFilter.h>
+#include <LibGfx/Filters/GrayscaleFilter.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -375,6 +377,31 @@ int main(int argc, char** argv)
         window));
 
     auto& filter_menu = menubar->add_menu("&Filter");
+
+    filter_menu.add_action(GUI::Action::create("Grayscale", [&](auto&) {
+        auto* editor = current_image_editor();
+        if (!editor)
+            return;
+
+        if (auto* layer = editor->active_layer()) {
+            Gfx::GrayscaleFilter filter;
+            filter.apply(layer->bitmap(), layer->rect(), layer->bitmap(), layer->rect(), {});
+            editor->did_complete_action();
+        }
+    }));
+
+    filter_menu.add_action(GUI::Action::create("Invert Colors", [&](auto&) {
+        auto* editor = current_image_editor();
+        if (!editor)
+            return;
+
+        if (auto* layer = editor->active_layer()) {
+            Gfx::ColorInvertingFilter filter;
+            filter.apply(layer->bitmap(), layer->rect(), layer->bitmap(), layer->rect(), {});
+            editor->did_complete_action();
+        }
+    }));
+
     auto& spatial_filters_menu = filter_menu.add_submenu("&Spatial");
 
     auto& edge_detect_submenu = spatial_filters_menu.add_submenu("&Edge Detect");
