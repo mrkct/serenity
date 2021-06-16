@@ -13,6 +13,7 @@ set(SOURCES
     Emoji.cpp
     Filters/ColorChangingFilter.cpp
     Filters/GrayscaleFilter.cpp
+    Filters/ColorInvertingFilter.cpp
     FontDatabase.cpp
     GIFLoader.cpp
     ICOLoader.cpp
