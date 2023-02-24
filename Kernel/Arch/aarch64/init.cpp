@@ -33,6 +33,7 @@
 #include <Kernel/Scheduler.h>
 #include <Kernel/Storage/StorageManagement.h>
 #include <Kernel/TTY/VirtualConsole.h>
+#include <Kernel/Arch/aarch64/RPi/SD.h>
 
 typedef void (*ctor_func_t)();
 extern ctor_func_t start_heap_ctors[];
@@ -46,8 +47,8 @@ uintptr_t __stack_chk_guard;
 
 READONLY_AFTER_INIT bool g_in_early_boot;
 
-extern "C" const u32 disk_image_start;
-extern "C" const u32 disk_image_size;
+extern "C" const u32 disk_image_start = 0;
+extern "C" const u32 disk_image_size = 0;
 
 multiboot_module_entry_t multiboot_copy_boot_modules_array[16];
 size_t multiboot_copy_boot_modules_count;
@@ -80,6 +81,11 @@ void init_stage2(void*)
     dmesgln("Firmware version: {}", firmware_version);
 
     VirtualFileSystem::initialize();
+
+    dbgln("storage management init?");
+    RPi::SD::the().testing();
+
+    while(1);
 
     StorageManagement::the().initialize(kernel_command_line().root_device(), kernel_command_line().is_force_pio(), kernel_command_line().is_nvme_polling_enabled());
     if (VirtualFileSystem::the().mount_root(StorageManagement::the().root_filesystem()).is_error()) {

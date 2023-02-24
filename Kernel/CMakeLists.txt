@@ -439,6 +439,7 @@ elseif("${SERENITY_ARCH}" STREQUAL "aarch64")
         Arch/aarch64/RPi/InterruptController.cpp
         Arch/aarch64/RPi/Mailbox.cpp
         Arch/aarch64/RPi/MMIO.cpp
+        Arch/aarch64/RPi/SD.cpp
         Arch/aarch64/RPi/Timer.cpp
         Arch/aarch64/RPi/UART.cpp
     )
@@ -733,7 +734,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/kernel.map" DESTINATION res)
 
 if ("${SERENITY_ARCH}" STREQUAL "aarch64")
     embed_resource(Kernel serenity_boot_logo "Arch/aarch64/SerenityLogoRGB.ppm")
-    embed_resource(Kernel disk_image "../Build/aarch64/_disk_image")
+    #embed_resource(Kernel disk_image "../Build/aarch64/_disk_image")
     add_custom_command(
             TARGET Kernel POST_BUILD
             COMMAND ${CMAKE_OBJCOPY} -O binary Kernel kernel8.img
