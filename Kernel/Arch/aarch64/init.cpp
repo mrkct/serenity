@@ -83,7 +83,8 @@ void init_stage2(void*)
     VirtualFileSystem::initialize();
 
     dbgln("storage management init?");
-    RPi::SD::the().testing();
+    MUST(RPi::SD::the().initialize());
+    MUST(RPi::SD::the().testing());
 
     while(1);
 
