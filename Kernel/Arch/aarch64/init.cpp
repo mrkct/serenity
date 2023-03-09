@@ -19,6 +19,7 @@
 #include <Kernel/Arch/aarch64/CPU.h>
 #include <Kernel/Arch/aarch64/RPi/Framebuffer.h>
 #include <Kernel/Arch/aarch64/RPi/Mailbox.h>
+#include <Kernel/Arch/aarch64/RPi/SD.h>
 #include <Kernel/Arch/aarch64/RPi/UART.h>
 #include <Kernel/Arch/aarch64/Registers.h>
 #include <Kernel/Arch/aarch64/TrapFrame.h>
@@ -33,7 +34,6 @@
 #include <Kernel/Scheduler.h>
 #include <Kernel/Storage/StorageManagement.h>
 #include <Kernel/TTY/VirtualConsole.h>
-#include <Kernel/Arch/aarch64/RPi/SD.h>
 
 typedef void (*ctor_func_t)();
 extern ctor_func_t start_heap_ctors[];
@@ -81,13 +81,6 @@ void init_stage2(void*)
     dmesgln("Firmware version: {}", firmware_version);
 
     VirtualFileSystem::initialize();
-
-    dbgln("storage management init?");
-    MUST(RPi::SD::the().initialize());
-    MUST(RPi::SD::the().testing());
-
-    while(1);
-
     StorageManagement::the().initialize(kernel_command_line().root_device(), kernel_command_line().is_force_pio(), kernel_command_line().is_nvme_polling_enabled());
     if (VirtualFileSystem::the().mount_root(StorageManagement::the().root_filesystem()).is_error()) {
         PANIC("VirtualFileSystem::mount_root failed");
@@ -128,7 +121,9 @@ extern "C" [[noreturn]] void init()
     multiboot_memory_map_count = 1;
 
     multiboot_flags = 0x4;
-    multiboot_copy_boot_modules_count = 1;
+    // FIXME: If the ramdisk is available, then this should be set to 1
+    //        Otherwise we read trash addresses from disk_image_start etc that are surely not valid
+    multiboot_copy_boot_modules_count = 0;
     auto disk_image_start_physical_addr = ((FlatPtr)&disk_image_start - kernel_load_base);
     multiboot_copy_boot_modules_array[0].start = disk_image_start_physical_addr;
     multiboot_copy_boot_modules_array[0].end = disk_image_start_physical_addr + disk_image_size;

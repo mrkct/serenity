@@ -26,6 +26,7 @@
 #include <Kernel/Storage/ATA/GenericIDE/Controller.h>
 #include <Kernel/Storage/NVMe/NVMeController.h>
 #include <Kernel/Storage/Ramdisk/Controller.h>
+#include <Kernel/Storage/SD/SDHostController.h>
 #include <Kernel/Storage/StorageManagement.h>
 #include <LibPartition/EBRPartitionTable.h>
 #include <LibPartition/GUIDPartitionTable.h>
@@ -444,6 +445,9 @@ UNMAP_AFTER_INIT void StorageManagement::initialize(StringView root_device, bool
     }
     // Note: Whether PCI bus is present on the system or not, always try to attach
     // a given ramdisk.
+    if (auto sdhc = SDHostController::try_initialize(); !sdhc.is_error()) {
+        m_controllers.append(sdhc.release_value());
+    }
     m_controllers.append(RamdiskController::initialize());
     enumerate_storage_devices();
     enumerate_disk_partitions();
