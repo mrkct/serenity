@@ -49,6 +49,13 @@ constexpr u32 CMD_SELECT_CARD = 0x07030000;
 constexpr u32 APP_SEND_SCR = 0x33220010;
 constexpr u32 CMD_SET_BUS_WIDTH = 0x06020000;
 
+// PLSS 5.1: all voltage windows
+constexpr u32 ACMD41_VOLTAGE = 0x00ff8000;
+// check if CCS bit is set => SDHC support
+constexpr u32 ACMD41_SDHC = 0x40000000;
+// PLSS 4.2.3.1: All voltage windows, XPC = 1, SDHC = 1
+constexpr u32 ACMD41_ARG = 0x50ff8000;
+
 SDDevice::SDDevice(StorageDevice::LUNAddress lun_address, u32 hardware_relative_controller_id)
     : StorageDevice(lun_address, hardware_relative_controller_id, 512, (u64)2 * 1024 * 1024 * 1024 / 512)
 {
@@ -57,7 +64,6 @@ SDDevice::SDDevice(StorageDevice::LUNAddress lun_address, u32 hardware_relative_
 void SDDevice::start_request(AsyncBlockDeviceRequest& request)
 {
     MutexLocker locker(m_lock);
-    // dbgln("SDDevice::start_request(bs: {}, bc: {}, bi: {})", request.block_size(), request.block_count(), request.block_index());
 
     if (!is_cart_inserted()) {
         request.complete(AsyncDeviceRequest::Failure);
@@ -83,10 +89,6 @@ void SDDevice::start_request(AsyncBlockDeviceRequest& request)
             request.complete(AsyncDeviceRequest::Failure);
             return;
         }
-
-        // for(int i = 0; i < 16; i++)
-        //     dbgln("[{}: {:x} - {:c}], ", i, data[i], data[i]);
-        // dbgln("");
 
         MUST(request.buffer().write(data, block * request.block_size(), request.block_size()));
     }
@@ -175,7 +177,8 @@ ErrorOr<void> SDDevice::try_initialize()
     TRY(wait_for_response());
 
     // 2. Send CMD8 (SEND_IF_COND) to the card
-    // FIXME: This is not a valid value according to the spec, but it's what is written in the example code and it works?
+    // SD interface condition: 7:0 = check pattern, 11:8 = supply voltage
+    //      0x1aa: check pattern = 10101010, supply voltage = 1 => 2.7-3.6V
     const u32 VOLTAGE_WINDOW = 0x1aa;
     TRY(issue_command(SEND_IF_COND, VOLTAGE_WINDOW));
     auto interface_condition_response = wait_for_response();
@@ -194,21 +197,31 @@ ErrorOr<void> SDDevice::try_initialize()
 
     // 5. Send ACMD41 (SEND_OP_COND) with HCS=1 to the card, repeat this until the card is ready or timeout
     m_ocr = {};
+    bool card_is_usable = true;
     if (!retry_with_timeout([&]() {
             if (issue_command(APP_CMD, 0).is_error() || wait_for_response().is_error())
                 return false;
 
-            if (issue_command(APP_SEND_OP_COND, 0x51ff8000).is_error())
+            if (issue_command(APP_SEND_OP_COND, ACMD41_ARG).is_error())
                 return false;
 
             if (auto acmd41_response = wait_for_response(); !acmd41_response.is_error()) {
+
+                // 20. check if card supports voltage windows we requested
+                // and sdhc
+                u32 response = acmd41_response.value().response[0];
+                if ((response & ACMD41_VOLTAGE) != ACMD41_VOLTAGE) {
+                    card_is_usable = false;
+                    return false;
+                }
+
                 m_ocr = OperatingConditionRegister::from_acmd41_response(acmd41_response.value().response[0]);
             }
 
             return m_ocr.card_power_up_status == 1;
         },
             100)) {
-        return EIO;
+        return card_is_usable ? EIO : ENODEV;
     }
 
     // 6. If you requested to switch to 1.8V, and the card accepts, execute a voltage switch sequence
@@ -365,7 +378,13 @@ ErrorOr<void> SDDevice::sd_clock_supply(u64 frequency)
 
     // FIXME: The way the SD Clock is to be calculated is different for other versions
     VERIFY(host_version() == SDHostVersion::Version3);
-    const u32 divisor = AK::max(sd_clock_frequency / (frequency), 2);
+    u32 divisor = AK::max(sd_clock_frequency / (frequency), 2);
+
+    if (sd_clock_frequency / divisor >= frequency) {
+        divisor++;
+    }
+
+    divisor -= 2;
 
     // 2. Set **Internal Clock Enable** and **SDCLK Frequency Select** in the *Clock Control* register
     const u32 two_upper_bits_of_sdclk_frequency_select = (divisor >> 8 & 0x3) << 6;

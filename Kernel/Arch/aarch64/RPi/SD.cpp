@@ -29,7 +29,10 @@ ErrorOr<u32> RPiSDCard::retrieve_sd_clock_frequency()
 {
     // FIXME: Actually get the frequency either from the capabilities register or from some other source
     // According to very reputable sources(some random guy on the internet), the RPi 3B+ returns 41666666
-    return { 41666666 };
+    const i64 ONE_MHZ = 1'000'000;
+    const u32 bclock = ((m_registers->capabilities_0 & 0xff00) >> 8) * ONE_MHZ;
+    dbgln("Base clock: {}", bclock);
+    return { bclock };
 }
 
 }
