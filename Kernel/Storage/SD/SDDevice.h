@@ -9,18 +9,20 @@
 namespace Kernel {
 
 class SDDevice : public StorageDevice {
-public:
+  public:
     ErrorOr<void> try_initialize();
 
     // ^StorageDevice
-    virtual bool can_read(OpenFileDescription const& fd, u64 offset) const override;
-    virtual bool can_write(OpenFileDescription const& fd, u64 offset) const override;
+    virtual bool can_read(OpenFileDescription const &fd,
+                          u64 offset) const override;
+    virtual bool can_write(OpenFileDescription const &fd,
+                           u64 offset) const override;
     virtual CommandSet command_set() const override { return CommandSet::SDIO; }
 
     // ^BlockDevice
-    virtual void start_request(AsyncBlockDeviceRequest&) override;
+    virtual void start_request(AsyncBlockDeviceRequest &) override;
 
-protected:
+  protected:
     // SD Host Controller Simplified Specification Version 3.00
     // NOTE: The registers must be 32 bits, because of a quirk in the RPI.
     struct SDRegisters {
@@ -55,16 +57,91 @@ protected:
     } __attribute__((packed));
 
     virtual ErrorOr<u32> retrieve_sd_clock_frequency() = 0;
-    virtual SDRegisters volatile* get_register_map_base_address() = 0;
+    virtual SDRegisters volatile *get_register_map_base_address() = 0;
 
     SDDevice(StorageDevice::LUNAddress, u32 hardware_relative_controller_id);
 
-private:
-    bool is_cart_inserted() const
-    {
+  private:
+    bool is_cart_inserted() const {
         constexpr u32 CARD_INSERTED = 1 << 16;
         return m_registers->present_state & CARD_INSERTED;
     }
+
+    enum class CommandIndex {
+        GoIdleState = 0,
+        AllSendCid = 2,
+        SendRelativeAddr = 3,
+        AppSetBusWidth = 6,
+        SelectCard = 7,
+        SendIfCond = 8,
+        ReadSingleBlock = 17,
+        ReadMultipleBlock = 18,
+        WriteSingleBlock = 24,
+        WriteMultipleBlock = 25,
+        AppSendOpCond = 41,
+        AppSendCsr = 51,
+        AppCmd = 55,
+    };
+
+    enum class CommandType { Normal, Suspend, Resume, Abort };
+
+    struct EmmcCommand {
+        u8 resp_a : 1;
+        u8 block_count : 1;
+        u8 auto_command : 2;
+        u8 direction : 1;
+        u8 multiblock : 1;
+        u16 resp_b : 10;
+        u8 response_type : 2;
+        u8 res0 : 1;
+        u8 crc_enable : 1;
+        u8 idx_enable : 1;
+        u8 is_data : 1;
+        u8 type : 2;
+        u8 index : 6;
+        u8 res1 : 2;
+
+        static u32 to_u32(EmmcCommand cmd) {
+            union {
+                u32 x;
+                struct EmmcCommand cmd;
+            } u;
+            u.cmd = cmd;
+            return u.x;
+        }
+
+        static EmmcCommand from_u32(u32 value) {
+            union {
+                u32 x;
+                struct EmmcCommand cmd;
+            } u;
+            u.x = value;
+            return u.cmd;
+        }
+    } __attribute__((packed));
+    static_assert(sizeof(EmmcCommand) == sizeof(u32));
+
+    EmmcCommand const &get_command(CommandIndex code) const;
+    static constexpr EmmcCommand build_cmd0();
+    static constexpr EmmcCommand build_cmd2();
+    static constexpr EmmcCommand build_cmd3();
+    static constexpr EmmcCommand build_cmd6();
+    static constexpr EmmcCommand build_cmd7();
+    static constexpr EmmcCommand build_cmd8();
+    static constexpr EmmcCommand build_cmd17();
+    static constexpr EmmcCommand build_cmd18();
+    static constexpr EmmcCommand build_cmd24();
+    static constexpr EmmcCommand build_cmd25();
+    static constexpr EmmcCommand build_cmd41();
+    static constexpr EmmcCommand build_cmd51();
+    static constexpr EmmcCommand build_cmd55();
+
+    enum class ResponseType {
+        NoResponse,
+        ResponseOf136Bits,
+        ResponseOf48Bits,
+        ResponseOf48BitsWithBusy
+    };
 
     struct OperatingConditionRegister {
         u32 : 15;
@@ -85,8 +162,7 @@ private:
         u32 card_capacity_status : 1;
         u32 card_power_up_status : 1;
 
-        static OperatingConditionRegister from_acmd41_response(u32 value)
-        {
+        static OperatingConditionRegister from_acmd41_response(u32 value) {
             union {
                 u32 x;
                 struct OperatingConditionRegister ocr;
@@ -108,8 +184,8 @@ private:
         u32 oem_id : 16;
         u32 manufacturer_id : 8;
 
-        static struct CardIdentificationRegister from_cid_response(u32 response[4])
-        {
+        static struct CardIdentificationRegister
+        from_cid_response(u32 response[4]) {
             union {
                 u32 x[4];
                 struct CardIdentificationRegister cid;
@@ -137,8 +213,7 @@ private:
         u32 command_support : 5;
         u32 : 32;
 
-        static struct SDConfigurationRegister from_u64(u64 x)
-        {
+        static struct SDConfigurationRegister from_u64(u64 x) {
             union {
                 u64 x;
                 struct SDConfigurationRegister scr;
@@ -156,9 +231,9 @@ private:
         Unknown
     };
 
-    SDHostVersion host_version()
-    {
-        const u16 host_controller_version_register = m_registers->slot_interrupt_status_and_version >> 16;
+    SDHostVersion host_version() {
+        const u16 host_controller_version_register =
+            m_registers->slot_interrupt_status_and_version >> 16;
         switch (host_controller_version_register & 0xff) {
         case 0x0:
             return SDHostVersion::Version1;
@@ -170,11 +245,10 @@ private:
             return SDHostVersion::Unknown;
         }
     }
-    enum class CardAddressingMode { ByteAddressing,
-        BlockAddressing };
-    CardAddressingMode card_addressing_mode() const
-    {
-        return m_ocr.card_capacity_status ? CardAddressingMode::BlockAddressing : CardAddressingMode::ByteAddressing;
+    enum class CardAddressingMode { ByteAddressing, BlockAddressing };
+    CardAddressingMode card_addressing_mode() const {
+        return m_ocr.card_capacity_status ? CardAddressingMode::BlockAddressing
+                                          : CardAddressingMode::ByteAddressing;
     }
 
     ErrorOr<void> reset_host_controller();
@@ -183,13 +257,9 @@ private:
     bool currently_active_command_uses_transfer_complete_interrupt();
 
     bool command_uses_transfer_complete_interrupt(u32 cmd) const;
-    bool command_requires_dat_line(u32 cmd) const;
-    bool command_is_abort(u32 cmd) const;
-    enum class ResponseType { NoResponse,
-        ResponseOf136Bits,
-        ResponseOf48Bits,
-        ResponseOf48BitsWithBusy };
-    ResponseType response_type(u32 cmd) const;
+    bool command_requires_dat_line(EmmcCommand) const;
+    bool command_is_abort(EmmcCommand) const;
+    ResponseType response_type(EmmcCommand) const;
 
     ErrorOr<void> sd_clock_supply(u64 frequency);
     void sd_clock_stop();
@@ -198,23 +268,25 @@ private:
     struct Response {
         u32 response[4];
     };
-    ErrorOr<void> issue_command(u32, u32 argument);
+    ErrorOr<void> issue_command(CommandIndex, u32 argument);
     ErrorOr<Response> wait_for_response();
 
     bool retry_with_timeout(Function<bool()>, i64 delay_between_tries = 0);
 
     // FIXME: Probably better to return how many bytes were actually read.
-    ErrorOr<void> sync_data_read_command(u32 cmd, u32 argument, u32 block_count, u32 block_size, u8* out);
+    ErrorOr<void> sync_data_read_command(CommandIndex command_index,
+                                         u32 argument, u32 block_count,
+                                         u32 block_size, u8 *out);
 
-    volatile struct SDRegisters* m_registers;
+    volatile struct SDRegisters *m_registers;
 
-    bool m_card_is_inserted { false };
-    u32 m_last_sent_command { 0 };
-    struct OperatingConditionRegister m_ocr { };
-    struct CardIdentificationRegister m_cid { };
-    struct SDConfigurationRegister m_scr { };
-    u32 m_rca { 0 };
-    Mutex m_lock { "SDDevice"sv };
+    bool m_card_is_inserted{false};
+    u32 m_last_sent_command{0};
+    struct OperatingConditionRegister m_ocr {};
+    struct CardIdentificationRegister m_cid {};
+    struct SDConfigurationRegister m_scr {};
+    u32 m_rca{0};
+    Mutex m_lock{"SDDevice"sv};
 };
 
-}
+} // namespace Kernel
