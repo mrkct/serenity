@@ -4,7 +4,8 @@
 
 namespace Kernel::SD {
 
-// Commands, defined in PLSS 4.7.4 with the format described in BCM2835 "CMDTM Register"
+// Commands, defined in PLSS 4.7.4 with the format described in BCM2835 "CMDTM
+// Register"
 enum class CommandIndex {
     GoIdleState = 0,
     AllSendCid = 2,
@@ -12,6 +13,7 @@ enum class CommandIndex {
     AppSetBusWidth = 6,
     SelectCard = 7,
     SendIfCond = 8,
+    SendCsd = 9,
     ReadSingleBlock = 17,
     ReadMultipleBlock = 18,
     WriteSingleBlock = 24,
@@ -21,10 +23,7 @@ enum class CommandIndex {
     AppCmd = 55,
 };
 
-enum class CommandType { Normal,
-    Suspend,
-    Resume,
-    Abort };
+enum class CommandType { Normal, Suspend, Resume, Abort };
 
 struct EmmcCommand {
     u8 resp_a : 1;
@@ -42,8 +41,7 @@ struct EmmcCommand {
     u8 index : 6;
     u8 res1 : 2;
 
-    static u32 to_u32(EmmcCommand cmd)
-    {
+    static u32 to_u32(EmmcCommand cmd) {
         union {
             u32 x;
             struct EmmcCommand cmd;
@@ -52,8 +50,7 @@ struct EmmcCommand {
         return u.x;
     }
 
-    static EmmcCommand from_u32(u32 value)
-    {
+    static EmmcCommand from_u32(u32 value) {
         union {
             u32 x;
             struct EmmcCommand cmd;
@@ -64,11 +61,13 @@ struct EmmcCommand {
 } __attribute__((packed));
 static_assert(sizeof(EmmcCommand) == sizeof(u32));
 
-EmmcCommand const& get_command(CommandIndex code);
+EmmcCommand const &get_command(CommandIndex);
 
-enum class ResponseType { NoResponse,
+enum class ResponseType {
+    NoResponse,
     ResponseOf136Bits,
     ResponseOf48Bits,
-    ResponseOf48BitsWithBusy };
+    ResponseOf48BitsWithBusy
+};
 
-}
+} // namespace Kernel::SD
