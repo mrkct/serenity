@@ -1,5 +1,6 @@
 #pragma once
 
+#include <AK/Endian.h>
 #include <AK/Types.h>
 
 namespace Kernel::SD {
@@ -56,8 +57,7 @@ struct OperatingConditionRegister {
     u32 card_capacity_status : 1;
     u32 card_power_up_status : 1;
 
-    static OperatingConditionRegister from_acmd41_response(u32 value)
-    {
+    static OperatingConditionRegister from_acmd41_response(u32 value) {
         union {
             u32 x;
             struct OperatingConditionRegister ocr;
@@ -68,9 +68,9 @@ struct OperatingConditionRegister {
 } __attribute__((packed));
 static_assert(sizeof(OperatingConditionRegister) == sizeof(u32));
 
+// CID response: "20 bits of the response data (R[127:8]) stored
+// in the Response register at REP[119:0]"
 struct CardIdentificationRegister {
-    u32 : 1;
-    u32 crc7_checksum : 7;
     u32 manufacturing_date : 12;
     u32 : 4;
     u32 product_serial_number : 32;
@@ -79,8 +79,8 @@ struct CardIdentificationRegister {
     u32 oem_id : 16;
     u32 manufacturer_id : 8;
 
-    static struct CardIdentificationRegister from_cid_response(u32 response[4])
-    {
+    static struct CardIdentificationRegister
+    from_cid_response(const u32 response[4]) {
         union {
             u32 x[4];
             struct CardIdentificationRegister cid;
@@ -92,7 +92,7 @@ struct CardIdentificationRegister {
         return u.cid;
     }
 } __attribute__((packed));
-static_assert(sizeof(CardIdentificationRegister) == sizeof(u32) * 4);
+static_assert(sizeof(CardIdentificationRegister) * 8 == 120);
 
 struct SDConfigurationRegister {
     u32 scr_structure : 4;
@@ -108,8 +108,7 @@ struct SDConfigurationRegister {
     u32 command_support : 5;
     u32 : 32;
 
-    static struct SDConfigurationRegister from_u64(u64 x)
-    {
+    static struct SDConfigurationRegister from_u64(u64 x) {
         union {
             u64 x;
             struct SDConfigurationRegister scr;
@@ -120,4 +119,58 @@ struct SDConfigurationRegister {
 } __attribute__((packed));
 static_assert(sizeof(SDConfigurationRegister) == sizeof(u64));
 
-}
+// PLSS: 5.3 CSD Register (CSD Version 1.0)
+// CSD response: "20 bits of the response data (R[127:8]) stored
+// in the Response register at REP[119:0]"
+struct CardSpecificDataRegister {
+    u32 : 1;
+    u32 write_protection_until_power_cycle : 1;
+    u32 file_format : 2;
+    u32 temporary_write_protection : 1;
+    u32 permanent_write_protection : 1;
+    u32 copy_flag : 1;
+    u32 file_format_group : 1;
+    u32 : 5;
+    u32 partial_blocks_for_write_allowed : 1;
+    u32 max_write_data_block_length : 4;
+    u32 write_speed_factor : 3;
+    u32 : 2;
+    u32 write_protect_group_enable : 1;
+    u32 write_protect_group_size : 7;
+    u32 erase_sector_size : 7;
+    u32 erase_single_block_enable : 1;
+    u32 device_size_multiplier : 3;
+    u32 max_write_current_at_vdd_max : 3;
+    u32 max_write_current_at_vdd_min : 3;
+    u32 max_read_current_at_vdd_max : 3;
+    u32 max_read_current_at_vdd_min : 3;
+    u32 device_size : 12;
+    u32 : 2;
+    u32 dsr_implemented : 1;
+    u32 read_block_misalignment : 1;
+    u32 write_block_misalignment : 1;
+    u32 partial_blocks_for_read_allowed : 1;
+    u32 max_read_data_block_length : 4;
+    u32 card_command_classes : 12;
+    u32 max_data_transfer_rate : 8;
+    u32 data_read_access_time2 : 8;
+    u32 data_read_access_time1 : 8;
+    u32 : 6;
+    u32 csd_structure : 2;
+
+    static struct CardSpecificDataRegister
+    from_csd_response(const u32 response[4]) {
+        union {
+            u32 x[4];
+            struct CardSpecificDataRegister csd;
+        } u;
+        u.x[0] = response[0];
+        u.x[1] = response[1];
+        u.x[2] = response[2];
+        u.x[3] = response[3];
+        return u.csd;
+    }
+} __attribute__((packed));
+static_assert(sizeof(CardSpecificDataRegister) * 8 == 120);
+
+} // namespace Kernel::SD
