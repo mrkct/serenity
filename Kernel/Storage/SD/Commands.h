@@ -14,6 +14,7 @@ enum class CommandIndex {
     SelectCard = 7,
     SendIfCond = 8,
     SendCsd = 9,
+    SetBlockLen = 16,
     ReadSingleBlock = 17,
     ReadMultipleBlock = 18,
     WriteSingleBlock = 24,
