@@ -69,6 +69,16 @@ constexpr Command build_cmd9()
     return cmd;
 }
 
+constexpr Command build_cmd16()
+{
+    Command cmd = {};
+    cmd.index = static_cast<u8>(CommandIndex::SetBlockLen);
+    cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
+    cmd.crc_enable = true;
+
+    return cmd;
+}
+
 constexpr Command build_cmd17()
 {
     Command cmd = {};
@@ -163,7 +173,7 @@ Command const& get_command(CommandIndex index)
 {
     static constexpr Command commands[] {
         build_cmd0(), build_cmd2(), build_cmd3(), build_cmd6(),
-        build_cmd7(), build_cmd8(), build_cmd9(), build_cmd17(),
+        build_cmd7(), build_cmd8(), build_cmd9(), build_cmd16(), build_cmd17(),
         build_cmd18(), build_cmd24(), build_cmd25(), build_cmd41(),
         build_cmd51(), build_cmd55()
     };
