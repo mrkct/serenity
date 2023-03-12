@@ -4,19 +4,25 @@
 
 namespace Kernel {
 
-SDMemoryCard::SDMemoryCard(SDHostController &sdhc,
-                           StorageDevice::LUNAddress lun_address,
-                           u32 hardware_relative_controller_id,
-                           u64 capacity_in_blocks, u32 relative_card_address,
-                           SD::OperatingConditionRegister ocr,
-                           SD::CardIdentificationRegister cid,
-                           SD::SDConfigurationRegister scr)
+SDMemoryCard::SDMemoryCard(SDHostController& sdhc,
+    StorageDevice::LUNAddress lun_address,
+    u32 hardware_relative_controller_id,
+    u64 capacity_in_blocks, u32 relative_card_address,
+    SD::OperatingConditionRegister ocr,
+    SD::CardIdentificationRegister cid,
+    SD::SDConfigurationRegister scr)
     : StorageDevice(lun_address, hardware_relative_controller_id, 512,
-                    capacity_in_blocks),
-      m_sdhc(sdhc), m_relative_card_address(relative_card_address), m_ocr(ocr),
-      m_cid(cid), m_scr(scr) {}
+        capacity_in_blocks)
+    , m_sdhc(sdhc)
+    , m_relative_card_address(relative_card_address)
+    , m_ocr(ocr)
+    , m_cid(cid)
+    , m_scr(scr)
+{
+}
 
-void SDMemoryCard::start_request(AsyncBlockDeviceRequest &request) {
+void SDMemoryCard::start_request(AsyncBlockDeviceRequest& request)
+{
     MutexLocker locker(m_lock);
 
     // FIXME: Check if the card was removed and notify the host controller
@@ -35,14 +41,14 @@ void SDMemoryCard::start_request(AsyncBlockDeviceRequest &request) {
 
         if (m_sdhc
                 .sync_data_read_command(SD::CommandIndex::ReadSingleBlock,
-                                        offset, 1, 512, data)
+                    offset, 1, 512, data)
                 .is_error()) {
             request.complete(AsyncDeviceRequest::Failure);
             return;
         }
 
         MUST(request.buffer().write(data, block * request.block_size(),
-                                    request.block_size()));
+            request.block_size()));
     }
 
     request.complete(AsyncDeviceRequest::Success);

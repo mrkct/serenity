@@ -23,7 +23,10 @@ enum class CommandIndex {
     AppCmd = 55,
 };
 
-enum class CommandType { Normal, Suspend, Resume, Abort };
+enum class CommandType { Normal,
+    Suspend,
+    Resume,
+    Abort };
 
 enum class ResponseType {
     NoResponse,
@@ -47,7 +50,8 @@ struct Command {
     u8 index : 6;
     u8 res1 : 2;
 
-    static Command from_u32(u32 value) {
+    static Command from_u32(u32 value)
+    {
         union {
             u32 x;
             struct Command cmd;
@@ -56,7 +60,8 @@ struct Command {
         return u.cmd;
     }
 
-    u32 to_u32() const {
+    u32 to_u32() const
+    {
         union {
             u32 x;
             Command cmd;
@@ -66,17 +71,20 @@ struct Command {
         return u.x;
     }
 
-    bool is_abort() const {
+    bool is_abort() const
+    {
         // BCM2835 "CMDTM Register"
         return type == static_cast<u8>(SD::CommandType::Abort);
     }
 
-    bool requires_dat_line() const {
+    bool requires_dat_line() const
+    {
         // BCM2835 "CMDTM Register"
         return is_data;
     }
 
-    ResponseType expected_response_type() const {
+    ResponseType expected_response_type() const
+    {
         switch (response_type) {
         case 0b00:
             return ResponseType::NoResponse;
@@ -90,7 +98,8 @@ struct Command {
         VERIFY_NOT_REACHED();
     }
 
-    bool uses_transfer_complete_interrupt() const {
+    bool uses_transfer_complete_interrupt() const
+    {
         // FIXME: I don't know how to determine this.
         //      probably sth about: TM_AUTO_CMD_EN?
         return false;
@@ -98,6 +107,6 @@ struct Command {
 } __attribute__((packed));
 static_assert(sizeof(Command) == sizeof(u32));
 
-Command const &get_command(CommandIndex);
+Command const& get_command(CommandIndex);
 
 } // namespace Kernel::SD

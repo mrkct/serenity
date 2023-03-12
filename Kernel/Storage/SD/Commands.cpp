@@ -2,14 +2,16 @@
 
 namespace Kernel::SD {
 
-constexpr Command build_cmd0() {
+constexpr Command build_cmd0()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::GoIdleState);
 
     return cmd;
 }
 
-constexpr Command build_cmd2() {
+constexpr Command build_cmd2()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AllSendCid);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf136Bits);
@@ -18,7 +20,8 @@ constexpr Command build_cmd2() {
     return cmd;
 }
 
-constexpr Command build_cmd3() {
+constexpr Command build_cmd3()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SendRelativeAddr);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -27,7 +30,8 @@ constexpr Command build_cmd3() {
     return cmd;
 }
 
-constexpr Command build_cmd6() {
+constexpr Command build_cmd6()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppSetBusWidth);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -35,7 +39,8 @@ constexpr Command build_cmd6() {
     return cmd;
 }
 
-constexpr Command build_cmd7() {
+constexpr Command build_cmd7()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SelectCard);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48BitsWithBusy);
@@ -44,7 +49,8 @@ constexpr Command build_cmd7() {
     return cmd;
 }
 
-constexpr Command build_cmd8() {
+constexpr Command build_cmd8()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SendIfCond);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -53,7 +59,8 @@ constexpr Command build_cmd8() {
     return cmd;
 }
 
-constexpr Command build_cmd9() {
+constexpr Command build_cmd9()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SendCsd);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf136Bits);
@@ -62,7 +69,8 @@ constexpr Command build_cmd9() {
     return cmd;
 }
 
-constexpr Command build_cmd17() {
+constexpr Command build_cmd17()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::ReadSingleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -74,7 +82,8 @@ constexpr Command build_cmd17() {
     return cmd;
 }
 
-constexpr Command build_cmd18() {
+constexpr Command build_cmd18()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::ReadMultipleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -92,7 +101,8 @@ constexpr Command build_cmd18() {
     return cmd;
 }
 
-constexpr Command build_cmd24() {
+constexpr Command build_cmd24()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::WriteSingleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -102,7 +112,8 @@ constexpr Command build_cmd24() {
     return cmd;
 }
 
-constexpr Command build_cmd25() {
+constexpr Command build_cmd25()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::WriteMultipleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -118,7 +129,8 @@ constexpr Command build_cmd25() {
     return cmd;
 }
 
-constexpr Command build_cmd41() {
+constexpr Command build_cmd41()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppSendOpCond);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -126,7 +138,8 @@ constexpr Command build_cmd41() {
     return cmd;
 }
 
-constexpr Command build_cmd51() {
+constexpr Command build_cmd51()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppSendScr);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -136,7 +149,8 @@ constexpr Command build_cmd51() {
     return cmd;
 }
 
-constexpr Command build_cmd55() {
+constexpr Command build_cmd55()
+{
     Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppCmd);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
@@ -145,14 +159,16 @@ constexpr Command build_cmd55() {
     return cmd;
 }
 
-Command const &get_command(CommandIndex index) {
-    static constexpr Command commands[]{
-        build_cmd0(),  build_cmd2(),  build_cmd3(),  build_cmd6(),
-        build_cmd7(),  build_cmd8(),  build_cmd9(),  build_cmd17(),
+Command const& get_command(CommandIndex index)
+{
+    static constexpr Command commands[] {
+        build_cmd0(), build_cmd2(), build_cmd3(), build_cmd6(),
+        build_cmd7(), build_cmd8(), build_cmd9(), build_cmd17(),
         build_cmd18(), build_cmd24(), build_cmd25(), build_cmd41(),
-        build_cmd51(), build_cmd55()};
+        build_cmd51(), build_cmd55()
+    };
 
-    for (auto const &cmd : commands) {
+    for (auto const& cmd : commands) {
         if (cmd.index == static_cast<u8>(index)) {
             return cmd;
         }

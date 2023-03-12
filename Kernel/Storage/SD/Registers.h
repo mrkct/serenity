@@ -57,7 +57,8 @@ struct OperatingConditionRegister {
     u32 card_capacity_status : 1;
     u32 card_power_up_status : 1;
 
-    static OperatingConditionRegister from_acmd41_response(u32 value) {
+    static OperatingConditionRegister from_acmd41_response(u32 value)
+    {
         union {
             u32 x;
             struct OperatingConditionRegister ocr;
@@ -80,7 +81,8 @@ struct CardIdentificationRegister {
     u32 manufacturer_id : 8;
 
     static struct CardIdentificationRegister
-    from_cid_response(const u32 response[4]) {
+    from_cid_response(const u32 response[4])
+    {
         union {
             u32 x[4];
             struct CardIdentificationRegister cid;
@@ -108,7 +110,8 @@ struct SDConfigurationRegister {
     u32 command_support : 5;
     u32 : 32;
 
-    static struct SDConfigurationRegister from_u64(u64 x) {
+    static struct SDConfigurationRegister from_u64(u64 x)
+    {
         union {
             u64 x;
             struct SDConfigurationRegister scr;
@@ -159,7 +162,8 @@ struct CardSpecificDataRegister {
     u32 csd_structure : 2;
 
     static struct CardSpecificDataRegister
-    from_csd_response(const u32 response[4]) {
+    from_csd_response(const u32 response[4])
+    {
         union {
             u32 x[4];
             struct CardSpecificDataRegister csd;
