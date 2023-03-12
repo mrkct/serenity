@@ -210,6 +210,7 @@ SDHostController::try_initialize_inserted_card()
     // No SDHC support so manually set block length to 512
     if (!ocr.card_capacity_status) {
         TRY(issue_command(SD::CommandIndex::SetBlockLen, 512));
+        TRY(wait_for_response());
     }
 
     u32 scr_bytes[2];
