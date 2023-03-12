@@ -23,6 +23,8 @@ static void delay(i64 nanoseconds)
         ;
 }
 
+constexpr u32 MAX_SUPPORTED_SDSC_FREQUENCY = 25000000;
+
 // In "m_registers->host_configuration_1"
 // In sub-register "Clock Control"
 constexpr u32 INTERNAL_CLOCK_ENABLE = 1 << 0;
@@ -198,6 +200,9 @@ SDHostController::try_initialize_inserted_card()
         block_count, capacity);
 
     // Extra steps:
+
+    // TODO: Do high speed initialisation, if supported
+    TRY(sd_clock_frequency_change(MAX_SUPPORTED_SDSC_FREQUENCY));
 
     TRY(issue_command(SD::CommandIndex::SelectCard, rca));
     TRY(wait_for_response());
