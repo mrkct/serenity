@@ -265,7 +265,6 @@ fi
 # add -machine vmport=off below to run the machine with ps/2 mouse
 if [ -z "$SERENITY_MACHINE" ]; then
     if [ "$SERENITY_ARCH" = "aarch64" ]; then
-        qemu-img resize ${SERENITY_DISK_IMAGE} 2G
         SERENITY_MACHINE="
         -M raspi3b
         -serial stdio
