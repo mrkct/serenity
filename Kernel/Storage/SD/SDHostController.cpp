@@ -55,37 +55,6 @@ void SDHostController::complete_current_request(
     VERIFY_NOT_REACHED();
 }
 
-bool SDHostController::command_uses_transfer_complete_interrupt(u32) const {
-    // FIXME: I don't know how to determine this.
-    //      probably sth about: TM_AUTO_CMD_EN?
-    return false;
-}
-
-bool SDHostController::command_requires_dat_line(
-    SD::EmmcCommand command) const {
-    // BCM2835 "CMDTM Register"
-    return command.is_data;
-}
-
-bool SDHostController::command_is_abort(SD::EmmcCommand command) const {
-    // BCM2835 "CMDTM Register"
-    return command.type == static_cast<u8>(SD::CommandType::Abort);
-}
-
-SD::ResponseType SDHostController::response_type(SD::EmmcCommand cmd) const {
-    switch (cmd.response_type) {
-    case 0b00:
-        return SD::ResponseType::NoResponse;
-    case 0b01:
-        return SD::ResponseType::ResponseOf136Bits;
-    case 0b10:
-        return SD::ResponseType::ResponseOf48Bits;
-    case 0b11:
-        return SD::ResponseType::ResponseOf48BitsWithBusy;
-    }
-    VERIFY_NOT_REACHED();
-}
-
 ErrorOr<NonnullLockRefPtr<SDHostController>>
 SDHostController::try_initialize() {
 #if ARCH(AARCH64)
@@ -215,7 +184,6 @@ SDHostController::try_initialize_inserted_card() {
     auto csd = SD::CardSpecificDataRegister::from_csd_response(
         send_csd_response.response);
 
-    // TODO: Change the clock frequency to a higher value
     // PLSS 5.3.2 CSD Register (CSD Version 1.0): C_SIZE
     u32 block_count =
         (csd.device_size + 1) * (1 << (csd.device_size_multiplier + 2));
@@ -227,6 +195,7 @@ SDHostController::try_initialize_inserted_card() {
           block_count, capacity);
 
     // Extra steps:
+
     TRY(issue_command(SD::CommandIndex::SelectCard, rca));
     TRY(wait_for_response());
 
@@ -244,7 +213,6 @@ SDHostController::try_initialize_inserted_card() {
                       0x2)); // 0b00=1 bit bus, 0b10=4 bit bus
     TRY(wait_for_response());
 
-    dbgln("SD card found: LUNAddress is {}-{}-{}", controller_id(), 0, 0);
     return TRY(adopt_nonnull_lock_ref_or_enomem(
         new SDMemoryCard(*this,
                          // FIXME: Unsure if these 2 params are correct
@@ -288,7 +256,7 @@ ErrorOr<void> SDHostController::issue_command(SD::CommandIndex index,
     // 3. If the Host Driver is issuing an abort command, go to step (5). In the
     // case of non-abort
     //    command, go to step (4).
-    if (command_requires_dat_line(cmd) && command_is_abort(cmd)) {
+    if (cmd.requires_dat_line() && !cmd.is_abort()) {
 
         // 4. Check Command Inhibit (DAT) in the Present State register. Repeat
         // this step until
@@ -305,7 +273,7 @@ ErrorOr<void> SDHostController::issue_command(SD::CommandIndex index,
     m_registers->argument_1 = argument;
 
     // 6. Set the Command register.
-    m_registers->transfer_mode_and_command = SD::EmmcCommand::to_u32(cmd);
+    m_registers->transfer_mode_and_command = cmd.to_u32();
 
     // 7. Perform Command Completion Sequence in accordance with 3.7.1.2.
     // Done in wait_for_response()
@@ -331,8 +299,8 @@ ErrorOr<SDHostController::Response> SDHostController::wait_for_response() {
 
     // 3. Read the Response register(s) to get the response.
     struct Response r = {};
-    auto cmd = SD::EmmcCommand::from_u32(last_sent_command());
-    switch (response_type(cmd)) {
+    auto cmd = last_sent_command();
+    switch (cmd.expected_response_type()) {
     case SD::ResponseType::NoResponse:
         break;
     case SD::ResponseType::ResponseOf136Bits:
@@ -352,7 +320,7 @@ ErrorOr<SDHostController::Response> SDHostController::wait_for_response() {
     // 4. Judge whether the command uses the Transfer Complete Interrupt or not.
     // If it uses Transfer
     //    Complete, go to step (5). If not, go to step (7).
-    if (command_uses_transfer_complete_interrupt(last_sent_command())) {
+    if (last_sent_command().uses_transfer_complete_interrupt()) {
         // 5. Wait for the Transfer Complete Interrupt. If the Transfer Complete
         // Interrupt has occurred, go to step (6).
         while ((m_registers->interrupt_status & TRANSFER_COMPLETE) == 0)
@@ -481,7 +449,7 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
     //    determined according to Table 2-8. (NOTE: We assume `cmd` already has
     //    the correct flags set)
     // 5. Set the value to Command register.
-    m_registers->transfer_mode_and_command = SD::EmmcCommand::to_u32(command);
+    m_registers->transfer_mode_and_command = command.to_u32();
 
     // 6. Then, wait for the Command Complete Interrupt.
     if (!retry_with_timeout(

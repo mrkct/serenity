@@ -2,15 +2,15 @@
 
 namespace Kernel::SD {
 
-constexpr EmmcCommand build_cmd0() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd0() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::GoIdleState);
 
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd2() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd2() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AllSendCid);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf136Bits);
     cmd.crc_enable = true;
@@ -18,8 +18,8 @@ constexpr EmmcCommand build_cmd2() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd3() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd3() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SendRelativeAddr);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.crc_enable = true;
@@ -27,16 +27,16 @@ constexpr EmmcCommand build_cmd3() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd6() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd6() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppSetBusWidth);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
 
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd7() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd7() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SelectCard);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48BitsWithBusy);
     cmd.crc_enable = true;
@@ -44,8 +44,8 @@ constexpr EmmcCommand build_cmd7() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd8() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd8() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SendIfCond);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.crc_enable = true;
@@ -53,8 +53,8 @@ constexpr EmmcCommand build_cmd8() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd9() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd9() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::SendCsd);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf136Bits);
     cmd.crc_enable = true;
@@ -62,8 +62,8 @@ constexpr EmmcCommand build_cmd9() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd17() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd17() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::ReadSingleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.is_data = true;
@@ -74,8 +74,8 @@ constexpr EmmcCommand build_cmd17() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd18() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd18() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::ReadMultipleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.is_data = true;
@@ -92,8 +92,8 @@ constexpr EmmcCommand build_cmd18() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd24() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd24() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::WriteSingleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.is_data = true;
@@ -102,8 +102,8 @@ constexpr EmmcCommand build_cmd24() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd25() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd25() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::WriteMultipleBlock);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.is_data = true;
@@ -118,16 +118,16 @@ constexpr EmmcCommand build_cmd25() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd41() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd41() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppSendOpCond);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
 
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd51() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd51() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppSendScr);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.direction = 1;
@@ -136,8 +136,8 @@ constexpr EmmcCommand build_cmd51() {
     return cmd;
 }
 
-constexpr EmmcCommand build_cmd55() {
-    EmmcCommand cmd = {};
+constexpr Command build_cmd55() {
+    Command cmd = {};
     cmd.index = static_cast<u8>(CommandIndex::AppCmd);
     cmd.response_type = static_cast<u8>(ResponseType::ResponseOf48Bits);
     cmd.crc_enable = true;
@@ -145,8 +145,8 @@ constexpr EmmcCommand build_cmd55() {
     return cmd;
 }
 
-EmmcCommand const &get_command(CommandIndex index) {
-    static constexpr EmmcCommand commands[]{
+Command const &get_command(CommandIndex index) {
+    static constexpr Command commands[]{
         build_cmd0(),  build_cmd2(),  build_cmd3(),  build_cmd6(),
         build_cmd7(),  build_cmd8(),  build_cmd9(),  build_cmd17(),
         build_cmd18(), build_cmd24(), build_cmd25(), build_cmd41(),

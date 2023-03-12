@@ -63,13 +63,8 @@ private:
 
     ErrorOr<void> reset_host_controller();
 
-    u32 last_sent_command() { return m_registers->transfer_mode_and_command; }
+    SD::Command last_sent_command() { return SD::Command::from_u32(m_registers->transfer_mode_and_command); }
     bool currently_active_command_uses_transfer_complete_interrupt();
-
-    bool command_uses_transfer_complete_interrupt(u32 cmd) const;
-    bool command_requires_dat_line(SD::EmmcCommand cmd) const;
-    bool command_is_abort(SD::EmmcCommand cmd) const;
-    SD::ResponseType response_type(SD::EmmcCommand cmd) const;
 
     ErrorOr<void> sd_clock_supply(u64 frequency);
     void sd_clock_stop();
