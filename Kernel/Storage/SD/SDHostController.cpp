@@ -4,7 +4,7 @@
 #include <Kernel/Storage/StorageManagement.h>
 #include <Kernel/Time/TimeManagement.h>
 #if ARCH(AARCH64)
-#include <Kernel/Arch/aarch64/RPi/SDHostController.h>
+#    include <Kernel/Arch/aarch64/RPi/SDHostController.h>
 #endif
 
 namespace Kernel {
@@ -15,7 +15,8 @@ namespace Kernel {
 // - SDHCI: SDHCI Simplified Host Controller Specification Version 3.0
 // - PLSS: Physical Layer Simplified Specification Version 9.00
 
-static void delay(i64 nanoseconds) {
+static void delay(i64 nanoseconds)
+{
     auto start = TimeManagement::the().monotonic_time().to_nanoseconds();
     auto end = start + nanoseconds;
     while (TimeManagement::the().monotonic_time().to_nanoseconds() < end)
@@ -44,33 +45,37 @@ constexpr u32 ACMD41_SDHC = 0x40000000;
 constexpr u32 ACMD41_ARG = 0x50ff8000;
 
 SDHostController::SDHostController(u32 hardware_relative_controller_id)
-    : StorageController(hardware_relative_controller_id) {}
+    : StorageController(hardware_relative_controller_id)
+{
+}
 
 bool SDHostController::reset() { TODO(); }
 
 bool SDHostController::shutdown() { TODO(); }
 
 void SDHostController::complete_current_request(
-    AsyncDeviceRequest::RequestResult) {
+    AsyncDeviceRequest::RequestResult)
+{
     VERIFY_NOT_REACHED();
 }
 
 ErrorOr<NonnullLockRefPtr<SDHostController>>
-SDHostController::try_initialize() {
+SDHostController::try_initialize()
+{
 #if ARCH(AARCH64)
-    auto hardware_relative_controller_id =
-        StorageManagement::generate_relative_sd_controller_id({});
+    auto hardware_relative_controller_id = StorageManagement::generate_relative_sd_controller_id({});
     auto controller = TRY(adopt_nonnull_lock_ref_or_enomem(
         new RPi::SDHostController(hardware_relative_controller_id)));
     TRY(controller->initialize());
 
-    return {controller};
+    return { controller };
 #else
     return ENODEV;
 #endif
 }
 
-ErrorOr<void> SDHostController::initialize() {
+ErrorOr<void> SDHostController::initialize()
+{
     m_registers = get_register_map_base_address();
     if (!m_registers)
         return EIO;
@@ -89,7 +94,8 @@ ErrorOr<void> SDHostController::initialize() {
 }
 
 ErrorOr<NonnullLockRefPtr<SDMemoryCard>>
-SDHostController::try_initialize_inserted_card() {
+SDHostController::try_initialize_inserted_card()
+{
     // PLSS: 4.2 Card Identification Mode
     // After power-on ...the cards are initialized with ... 400KHz clock
     // frequency.
@@ -133,8 +139,7 @@ SDHostController::try_initialize_inserted_card() {
     bool card_is_usable = true;
     if (!retry_with_timeout(
             [&]() {
-                if (issue_command(SD::CommandIndex::AppCmd, 0).is_error() ||
-                    wait_for_response().is_error())
+                if (issue_command(SD::CommandIndex::AppCmd, 0).is_error() || wait_for_response().is_error())
                     return false;
 
                 if (issue_command(SD::CommandIndex::AppSendOpCond, ACMD41_ARG)
@@ -157,8 +162,7 @@ SDHostController::try_initialize_inserted_card() {
                 }
 
                 return ocr.card_power_up_status == 1;
-            },
-            100)) {
+            })) {
         return card_is_usable ? EIO : ENODEV;
     }
 
@@ -185,14 +189,13 @@ SDHostController::try_initialize_inserted_card() {
         send_csd_response.response);
 
     // PLSS 5.3.2 CSD Register (CSD Version 1.0): C_SIZE
-    u32 block_count =
-        (csd.device_size + 1) * (1 << (csd.device_size_multiplier + 2));
+    u32 block_count = (csd.device_size + 1) * (1 << (csd.device_size_multiplier + 2));
     u32 block_size = (1 << csd.max_read_data_block_length);
     u64 capacity = (u64)block_count * block_size;
     u64 card_capacity_in_blocks = capacity / block_size;
 
     dbgln("SD: block_size: {}, block_count: {}, capacity: {}", block_size,
-          block_count, capacity);
+        block_count, capacity);
 
     // Extra steps:
 
@@ -203,26 +206,27 @@ SDHostController::try_initialize_inserted_card() {
     TRY(issue_command(SD::CommandIndex::AppCmd, rca));
     TRY(wait_for_response());
     TRY(sync_data_read_command(SD::CommandIndex::AppSendScr, 0, 1, 8,
-                               (u8 *)scr_bytes));
+        (u8*)scr_bytes));
     auto scr = SD::SDConfigurationRegister::from_u64(
         static_cast<u64>(scr_bytes[1]) << 32 | scr_bytes[0]);
 
     TRY(issue_command(SD::CommandIndex::AppCmd, rca));
     TRY(wait_for_response());
     TRY(issue_command(SD::CommandIndex::AppSetBusWidth,
-                      0x2)); // 0b00=1 bit bus, 0b10=4 bit bus
+        0x2)); // 0b00=1 bit bus, 0b10=4 bit bus
     TRY(wait_for_response());
 
     return TRY(adopt_nonnull_lock_ref_or_enomem(
         new SDMemoryCard(*this,
-                         // FIXME: Unsure if these 2 params are correct
-                         StorageDevice::LUNAddress{controller_id(), 0, 0},
-                         hardware_relative_controller_id(),
-                         card_capacity_in_blocks, rca, ocr, cid, scr)));
+            // FIXME: Unsure if these 2 params are correct
+            StorageDevice::LUNAddress { controller_id(), 0, 0 },
+            hardware_relative_controller_id(),
+            card_capacity_in_blocks, rca, ocr, cid, scr)));
 }
 
 bool SDHostController::retry_with_timeout(Function<bool()> f,
-                                          i64 delay_between_tries) {
+    i64 delay_between_tries)
+{
     int timeout = 1000;
     bool success = false;
     while (!success && timeout > 0) {
@@ -235,7 +239,8 @@ bool SDHostController::retry_with_timeout(Function<bool()> f,
 }
 
 ErrorOr<void> SDHostController::issue_command(SD::CommandIndex index,
-                                              u32 argument) {
+    u32 argument)
+{
     // SDHC 3.7.1 Transaction Control without Data Transfer Using DAT Line
     constexpr u32 COMMAND_INHIBIT = 1 << 1;
     auto cmd = SD::get_command(index);
@@ -245,8 +250,7 @@ ErrorOr<void> SDHostController::issue_command(SD::CommandIndex index,
     //    That is, when Command Inhibit (CMD) is 1, the Host Driver
     //    shall not issue an SD Command.
     if (!retry_with_timeout(
-            [&]() { return !(m_registers->present_state & COMMAND_INHIBIT); },
-            100000)) {
+            [&]() { return !(m_registers->present_state & COMMAND_INHIBIT); })) {
         return EIO;
     }
 
@@ -263,8 +267,7 @@ ErrorOr<void> SDHostController::issue_command(SD::CommandIndex index,
         //    Command Inhibit (DAT) is set to 0.
         constexpr u32 DATA_INHIBIT = 1 << 2;
         if (!retry_with_timeout(
-                [&]() { return !(m_registers->present_state & DATA_INHIBIT); },
-                100)) {
+                [&]() { return !(m_registers->present_state & DATA_INHIBIT); })) {
             return EIO;
         }
     }
@@ -281,15 +284,15 @@ ErrorOr<void> SDHostController::issue_command(SD::CommandIndex index,
     return {};
 }
 
-ErrorOr<SDHostController::Response> SDHostController::wait_for_response() {
+ErrorOr<SDHostController::Response> SDHostController::wait_for_response()
+{
     // SDHC 3.7.1.2 The Sequence to Finalize a Command
 
     // 1. Wait for the Command Complete Interrupt. If the Command Complete
     // Interrupt has occurred,
     //    go to step (2).
     if (!retry_with_timeout(
-            [&]() { return m_registers->interrupt_status & COMMAND_COMPLETE; },
-            10000)) {
+            [&]() { return m_registers->interrupt_status & COMMAND_COMPLETE; })) {
         return EIO;
     }
 
@@ -323,6 +326,7 @@ ErrorOr<SDHostController::Response> SDHostController::wait_for_response() {
     if (last_sent_command().uses_transfer_complete_interrupt()) {
         // 5. Wait for the Transfer Complete Interrupt. If the Transfer Complete
         // Interrupt has occurred, go to step (6).
+
         while ((m_registers->interrupt_status & TRANSFER_COMPLETE) == 0)
             ;
 
@@ -335,10 +339,11 @@ ErrorOr<SDHostController::Response> SDHostController::wait_for_response() {
     // are specific to each command therefore those steps are not implemented
     // here.
 
-    return {r};
+    return { r };
 }
 
-ErrorOr<void> SDHostController::sd_clock_supply(u64 frequency) {
+ErrorOr<void> SDHostController::sd_clock_supply(u64 frequency)
+{
     // SDHC 3.2.1 SD Clock Supply Sequence
     // The *Clock Control* register is in the lower 16 bits of *Host
     // Configuration 1*
@@ -361,43 +366,37 @@ ErrorOr<void> SDHostController::sd_clock_supply(u64 frequency) {
     // 2. Set **Internal Clock Enable** and **SDCLK Frequency Select** in the
     // *Clock Control* register
     const u32 two_upper_bits_of_sdclk_frequency_select = (divisor >> 8 & 0x3)
-                                                         << 6;
+        << 6;
     const u32 eight_lower_bits_of_sdclk_frequency_select = (divisor & 0xff)
-                                                           << 8;
-    const u32 SDCLK_FREQUENCY_SELECT =
-        two_upper_bits_of_sdclk_frequency_select |
-        eight_lower_bits_of_sdclk_frequency_select;
-    m_registers->host_configuration_1 = m_registers->host_configuration_1 |
-                                        INTERNAL_CLOCK_ENABLE |
-                                        SDCLK_FREQUENCY_SELECT;
+        << 8;
+    const u32 SDCLK_FREQUENCY_SELECT = two_upper_bits_of_sdclk_frequency_select | eight_lower_bits_of_sdclk_frequency_select;
+    m_registers->host_configuration_1 = m_registers->host_configuration_1 | INTERNAL_CLOCK_ENABLE | SDCLK_FREQUENCY_SELECT;
 
     // 3. Check **Internal Clock Stable** in the *Clock Control* register until
     // it is 1
     if (!retry_with_timeout(
             [&] {
-                return m_registers->host_configuration_1 &
-                       INTERNAL_CLOCK_STABLE;
-            },
-            100)) {
+                return m_registers->host_configuration_1 & INTERNAL_CLOCK_STABLE;
+            })) {
         return EIO;
     }
 
     // 4. Set **SD Clock Enable** in the *Clock Control* register to 1
-    m_registers->host_configuration_1 =
-        m_registers->host_configuration_1 | SD_CLOCK_ENABLE;
+    m_registers->host_configuration_1 = m_registers->host_configuration_1 | SD_CLOCK_ENABLE;
 
     return {};
 }
 
-void SDHostController::sd_clock_stop() {
+void SDHostController::sd_clock_stop()
+{
     // 3.2.2 SD Clock Stop Sequence
 
     // 1. Set **SD Clock Enable** in the *Clock Control* register to 0
-    m_registers->host_configuration_1 =
-        m_registers->host_configuration_1 & ~SD_CLOCK_ENABLE;
+    m_registers->host_configuration_1 = m_registers->host_configuration_1 & ~SD_CLOCK_ENABLE;
 }
 
-ErrorOr<void> SDHostController::sd_clock_frequency_change(u64 new_frequency) {
+ErrorOr<void> SDHostController::sd_clock_frequency_change(u64 new_frequency)
+{
     // 3.2.3 SD Clock Frequency Change Sequence
 
     // 1. Execute the SD Clock Stop Sequence
@@ -407,16 +406,14 @@ ErrorOr<void> SDHostController::sd_clock_frequency_change(u64 new_frequency) {
     return sd_clock_supply(new_frequency);
 }
 
-ErrorOr<void> SDHostController::reset_host_controller() {
+ErrorOr<void> SDHostController::reset_host_controller()
+{
     m_registers->host_configuration_0 = 0;
-    m_registers->host_configuration_1 =
-        m_registers->host_configuration_1 | SOFTWARE_RESET_FOR_ALL;
+    m_registers->host_configuration_1 = m_registers->host_configuration_1 | SOFTWARE_RESET_FOR_ALL;
     if (!retry_with_timeout(
             [&] {
-                return (m_registers->host_configuration_1 &
-                        SOFTWARE_RESET_FOR_ALL) == 0;
-            },
-            100)) {
+                return (m_registers->host_configuration_1 & SOFTWARE_RESET_FOR_ALL) == 0;
+            })) {
         return EIO;
     }
 
@@ -424,12 +421,13 @@ ErrorOr<void> SDHostController::reset_host_controller() {
 }
 
 ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
-                                                       u32 argument,
-                                                       u32 block_count,
-                                                       u32 block_size,
-                                                       u8 *out) {
+    u32 argument,
+    u32 block_count,
+    u32 block_size,
+    u8* out)
+{
     VERIFY(block_size * block_count % 4 == 0);
-    u32 *buffer = (u32 *)out;
+    u32* buffer = (u32*)out;
     auto command = SD::get_command(index);
     // 3.7.2 Transaction Control with Data Transfer Using DAT Line (without DMA)
 
@@ -453,8 +451,7 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
 
     // 6. Then, wait for the Command Complete Interrupt.
     if (!retry_with_timeout(
-            [&]() { return m_registers->interrupt_status & COMMAND_COMPLETE; },
-            100)) {
+            [&]() { return m_registers->interrupt_status & COMMAND_COMPLETE; })) {
         return EIO;
     }
 
@@ -477,8 +474,7 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
         if (!retry_with_timeout(
                 [&]() {
                     return m_registers->interrupt_status & BUFFER_READ_READY;
-                },
-                100)) {
+                })) {
             return EIO;
         }
 
@@ -498,8 +494,7 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
 
     // 19. Wait for Transfer Complete Interrupt.
     if (!retry_with_timeout(
-            [&]() { return m_registers->interrupt_status & TRANSFER_COMPLETE; },
-            100)) {
+            [&]() { return m_registers->interrupt_status & TRANSFER_COMPLETE; })) {
         return EIO;
     }
 
@@ -510,11 +505,12 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
     return {};
 }
 
-ErrorOr<u32> SDHostController::retrieve_sd_clock_frequency() {
+ErrorOr<u32> SDHostController::retrieve_sd_clock_frequency()
+{
     const i64 ONE_MHZ = 1'000'000;
     const u32 bclock = ((m_registers->capabilities_0 & 0xff00) >> 8) * ONE_MHZ;
 
-    return {bclock};
+    return { bclock };
 }
 
 } // namespace Kernel
