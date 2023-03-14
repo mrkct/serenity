@@ -77,6 +77,8 @@ private:
     ErrorOr<void> issue_command(SD::CommandIndex, u32 argument);
     ErrorOr<Response> wait_for_response();
 
+    bool card_status_contains_errors(SD::CommandIndex, u32);
+
     bool retry_with_timeout(Function<bool()>, i64 delay_between_tries = 100);
 
     // FIXME: Probably better to return how many bytes were actually read.

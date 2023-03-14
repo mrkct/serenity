@@ -346,6 +346,12 @@ ErrorOr<SDHostController::Response> SDHostController::wait_for_response()
         m_registers->interrupt_status = TRANSFER_COMPLETE;
     }
 
+    if (cmd.expected_response_type() != SD::ResponseType::ResponseOf136Bits) {
+        if (card_status_contains_errors(cmd.command_index(), r.response[0])) {
+            return EIO;
+        }
+    }
+
     // NOTE: Steps 7, 8 and 9 consist of checking the response for errors, which
     // are specific to each command therefore those steps are not implemented
     // here.
@@ -522,6 +528,65 @@ ErrorOr<u32> SDHostController::retrieve_sd_clock_frequency()
     const u32 bclock = ((m_registers->capabilities_0 & 0xff00) >> 8) * ONE_MHZ;
 
     return { bclock };
+}
+
+// PLSS Table 4-43 : Card Status Field/Command
+bool SDHostController::card_status_contains_errors(SD::CommandIndex index, u32 resp)
+{
+    SD::CardStatus status;
+    // PLSS 4.9.5 R6
+    if (index == SD::CommandIndex::SendRelativeAddr) {
+        status = SD::CardStatus::from_response((resp & 0x1fff) | ((resp & 0x2000) << 6) | ((resp & 0x4000) << 8) | ((resp & 0x8000) << 8));
+    } else {
+        status = SD::CardStatus::from_response(resp);
+    }
+
+    bool common_errors = status.error || status.cc_error || status.card_ecc_failed || status.illegal_command || status.com_crc_error || status.lock_unlock_failed || status.card_is_locked || status.wp_violation || status.erase_param || status.csd_overwrite;
+
+    bool contains_errors = false;
+    switch (index) {
+    case SD::CommandIndex::SendRelativeAddr:
+        if (status.error || status.illegal_command || status.com_crc_error) {
+            contains_errors = true;
+        }
+        break;
+    case SD::CommandIndex::SelectCard:
+        if (common_errors) {
+            contains_errors = true;
+        }
+        break;
+    case SD::CommandIndex::SetBlockLen:
+        if (common_errors || status.block_len_error) {
+            contains_errors = true;
+        }
+        break;
+    case SD::CommandIndex::ReadSingleBlock:
+    case SD::CommandIndex::ReadMultipleBlock:
+        if (common_errors || status.address_error || status.out_of_range) {
+            contains_errors = true;
+        }
+        break;
+    case SD::CommandIndex::WriteSingleBlock:
+    case SD::CommandIndex::WriteMultipleBlock:
+        if (common_errors || status.block_len_error || status.address_error || status.out_of_range) {
+            contains_errors = true;
+        }
+        break;
+    case SD::CommandIndex::AppSendScr:
+        if (common_errors) {
+            contains_errors = true;
+        }
+        break;
+    case SD::CommandIndex::AppCmd:
+        if (common_errors) {
+            contains_errors = true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    return contains_errors;
 }
 
 } // namespace Kernel

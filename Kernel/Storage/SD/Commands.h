@@ -99,6 +99,43 @@ struct Command {
         VERIFY_NOT_REACHED();
     }
 
+    CommandIndex command_index() const
+    {
+        switch (index) {
+        case 0:
+            return CommandIndex::GoIdleState;
+        case 2:
+            return CommandIndex::AllSendCid;
+        case 3:
+            return CommandIndex::SendRelativeAddr;
+        case 6:
+            return CommandIndex::AppSetBusWidth;
+        case 7:
+            return CommandIndex::SelectCard;
+        case 8:
+            return CommandIndex::SendIfCond;
+        case 9:
+            return CommandIndex::SendCsd;
+        case 16:
+            return CommandIndex::SetBlockLen;
+        case 17:
+            return CommandIndex::ReadSingleBlock;
+        case 18:
+            return CommandIndex::ReadMultipleBlock;
+        case 24:
+            return CommandIndex::WriteSingleBlock;
+        case 25:
+            return CommandIndex::WriteMultipleBlock;
+        case 41:
+            return CommandIndex::AppSendOpCond;
+        case 51:
+            return CommandIndex::AppSendScr;
+        case 55:
+            return CommandIndex::AppCmd;
+        }
+        VERIFY_NOT_REACHED();
+    }
+
     bool uses_transfer_complete_interrupt() const
     {
         // FIXME: I don't know how to determine this.
