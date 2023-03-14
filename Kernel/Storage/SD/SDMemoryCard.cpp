@@ -33,22 +33,17 @@ void SDMemoryCard::start_request(AsyncBlockDeviceRequest& request)
     }
 
     VERIFY(request.block_size() <= 512);
-    u8 data[512]; // FIXME: Horrible
+    auto buffer = request.buffer();
     for (u32 block = 0; block < request.block_count(); ++block) {
         u32 offset = request.block_index() + block;
         if (card_addressing_mode() == CardAddressingMode::ByteAddressing)
             offset *= 512;
 
-        if (m_sdhc
-                .sync_data_read_command(SD::CommandIndex::ReadSingleBlock,
-                    offset, 1, 512, data)
-                .is_error()) {
+        if (m_sdhc.sync_data_read_command(SD::CommandIndex::ReadSingleBlock, offset, 1, request.block_size(), buffer).is_error()) {
             request.complete(AsyncDeviceRequest::Failure);
             return;
         }
-
-        MUST(request.buffer().write(data, block * request.block_size(),
-            request.block_size()));
+        buffer = buffer.offset(request.block_size());
     }
 
     request.complete(AsyncDeviceRequest::Success);

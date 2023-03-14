@@ -82,7 +82,7 @@ private:
     bool retry_with_timeout(Function<bool()>, i64 delay_between_tries = 100);
 
     // FIXME: Probably better to return how many bytes were actually read.
-    ErrorOr<void> sync_data_read_command(SD::CommandIndex, u32 argument, u32 block_count, u32 block_size, u8* out);
+    ErrorOr<void> sync_data_read_command(SD::CommandIndex, u32 argument, u32 block_count, u32 block_size, UserOrKernelBuffer out);
 
     volatile struct SD::SDRegisters* m_registers;
     LockRefPtr<SDMemoryCard> m_card { nullptr };

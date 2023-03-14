@@ -216,8 +216,10 @@ SDHostController::try_initialize_inserted_card()
     u32 scr_bytes[2];
     TRY(issue_command(SD::CommandIndex::AppCmd, rca));
     TRY(wait_for_response());
-    TRY(sync_data_read_command(SD::CommandIndex::AppSendScr, 0, 1, 8,
-        (u8*)scr_bytes));
+    TRY(sync_data_read_command(
+        SD::CommandIndex::AppSendScr,
+        0, 1, 8,
+        UserOrKernelBuffer::for_kernel_buffer(reinterpret_cast<u8*>(scr_bytes))));
     auto scr = SD::SDConfigurationRegister::from_u64(
         static_cast<u64>(scr_bytes[1]) << 32 | scr_bytes[0]);
 
@@ -441,10 +443,9 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
     u32 argument,
     u32 block_count,
     u32 block_size,
-    u8* out)
+    UserOrKernelBuffer out)
 {
     VERIFY(block_size * block_count % 4 == 0);
-    u32* buffer = (u32*)out;
     auto command = SD::get_command(index);
     // 3.7.2 Transaction Control with Data Transfer Using DAT Line (without DMA)
 
@@ -501,8 +502,10 @@ ErrorOr<void> SDHostController::sync_data_read_command(SD::CommandIndex index,
 
         // 16. Read block data (in according to the number of bytes specified at
         // the step (1)) from the Buffer Data Port register
+        u32 temp;
         for (u32 j = 0; j < block_size / sizeof(u32); j++) {
-            buffer[i * block_size + j] = m_registers->buffer_data_port;
+            temp = m_registers->buffer_data_port;
+            TRY(out.write(&temp, i * block_size + sizeof(u32) * j, sizeof(u32)));
         }
     }
 
