@@ -177,4 +177,44 @@ struct CardSpecificDataRegister {
 } __attribute__((packed));
 static_assert(sizeof(CardSpecificDataRegister) * 8 == 120);
 
+struct CardStatus {
+    u32 : 3;
+    u32 ake_seq_error : 1;
+    u32 : 1;
+    u32 app_cmd : 1;
+    u32 fx_event : 1;
+    u32 : 1;
+    u32 ready_for_data : 1;
+    u32 current_state : 4;
+    u32 erase_reset : 1;
+    u32 card_ecc_disabled : 1;
+    u32 wp_erase_skip : 1;
+    u32 csd_overwrite : 1;
+    u32 : 2;
+    u32 error : 1;
+    u32 cc_error : 1;
+    u32 card_ecc_failed : 1;
+    u32 illegal_command : 1;
+    u32 com_crc_error : 1;
+    u32 lock_unlock_failed : 1;
+    u32 card_is_locked : 1;
+    u32 wp_violation : 1;
+    u32 erase_param : 1;
+    u32 erase_seq_error : 1;
+    u32 block_len_error : 1;
+    u32 address_error : 1;
+    u32 out_of_range : 1;
+
+    static struct CardStatus from_response(const u32 response)
+    {
+        union {
+            u32 x;
+            struct CardStatus status;
+        } u;
+        u.x = response;
+        return u.status;
+    }
+} __attribute__((packed));
+static_assert(sizeof(CardStatus) == sizeof(u32));
+
 } // namespace Kernel::SD
