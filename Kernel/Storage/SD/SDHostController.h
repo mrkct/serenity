@@ -98,8 +98,8 @@ private:
         u32 block_size,
         UserOrKernelBuffer,
         DataTransferType data_transfer_type);
-    ErrorOr<void> read_block(u32 block_address, UserOrKernelBuffer out);
-    ErrorOr<void> write_block(u32 block_address, UserOrKernelBuffer in);
+    ErrorOr<void> read_block(u32 block_address, u32 block_count, UserOrKernelBuffer out);
+    ErrorOr<void> write_block(u32 block_address, u32 block_count, UserOrKernelBuffer in);
     ErrorOr<SD::SDConfigurationRegister> retrieve_sd_configuration_register(u32 relative_card_address);
 
     volatile struct SD::SDRegisters* m_registers;

@@ -32,6 +32,7 @@ private:
         SDHostController& sdhc,
         StorageDevice::LUNAddress,
         u32 hardware_relative_controller_id,
+        u32 block_len,
         u64 capacity_in_blocks,
         u32 relative_card_address,
         SD::OperatingConditionRegister ocr,

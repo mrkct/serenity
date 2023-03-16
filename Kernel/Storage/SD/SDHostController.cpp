@@ -47,10 +47,10 @@ const u32 BUFFER_READ_READY = 1 << 5;
 
 // PLSS 5.1: all voltage windows
 constexpr u32 ACMD41_VOLTAGE = 0x00ff8000;
-// check if CCS bit is set => SDHC support
-constexpr u32 ACMD41_SDHC = 0x40000000;
 // PLSS 4.2.3.1: All voltage windows, XPC = 1, SDHC = 1
 constexpr u32 ACMD41_ARG = 0x50ff8000;
+
+constexpr u32 BLOCK_LEN = 512;
 
 SDHostController::SDHostController(u32 hardware_relative_controller_id)
     : StorageController(hardware_relative_controller_id)
@@ -198,7 +198,7 @@ SDHostController::try_initialize_inserted_card()
     u32 block_count = (csd.device_size + 1) * (1 << (csd.device_size_multiplier + 2));
     u32 block_size = (1 << csd.max_read_data_block_length);
     u64 capacity = (u64)block_count * block_size;
-    u64 card_capacity_in_blocks = capacity / block_size;
+    u64 card_capacity_in_blocks = capacity / BLOCK_LEN;
 
     dbgln("SD: block_size: {}, block_count: {}, capacity: {}", block_size,
         block_count, capacity);
@@ -211,9 +211,9 @@ SDHostController::try_initialize_inserted_card()
     TRY(issue_command(SD::CommandIndex::SelectCard, rca));
     TRY(wait_for_response());
 
-    // No SDHC support so manually set block length to 512
+    // Set block length to 512
     if (!ocr.card_capacity_status) {
-        TRY(issue_command(SD::CommandIndex::SetBlockLen, 512));
+        TRY(issue_command(SD::CommandIndex::SetBlockLen, BLOCK_LEN));
         TRY(wait_for_response());
     }
 
@@ -229,7 +229,7 @@ SDHostController::try_initialize_inserted_card()
         new SDMemoryCard(*this,
             // FIXME: Unsure if these 2 params are correct
             StorageDevice::LUNAddress { controller_id(), 0, 0 },
-            hardware_relative_controller_id(),
+            hardware_relative_controller_id(), BLOCK_LEN,
             card_capacity_in_blocks, rca, ocr, cid, scr)));
 }
 
@@ -547,24 +547,43 @@ ErrorOr<void> SDHostController::transaction_control_with_data_transfer_using_the
     return {};
 }
 
-ErrorOr<void> SDHostController::read_block(u32 block_address, UserOrKernelBuffer out)
+ErrorOr<void> SDHostController::read_block(u32 block_address, u32 block_count, UserOrKernelBuffer out)
 {
+    if (block_count > 1) {
+        return transaction_control_with_data_transfer_using_the_dat_line_without_dma(
+            SD::CommandIndex::ReadMultipleBlock,
+            block_address,
+            block_count,
+            BLOCK_LEN,
+            out,
+            DataTransferType::Read);
+    }
+
     return transaction_control_with_data_transfer_using_the_dat_line_without_dma(
         SD::CommandIndex::ReadSingleBlock,
         block_address,
-        1,
-        512,
+        block_count,
+        BLOCK_LEN,
         out,
         DataTransferType::Read);
 }
 
-ErrorOr<void> SDHostController::write_block(u32 block_address, UserOrKernelBuffer in)
+ErrorOr<void> SDHostController::write_block(u32 block_address, u32 block_count, UserOrKernelBuffer in)
 {
+    if (block_count > 1) {
+        return transaction_control_with_data_transfer_using_the_dat_line_without_dma(
+            SD::CommandIndex::WriteMultipleBlock,
+            block_address,
+            block_count,
+            BLOCK_LEN,
+            in,
+            DataTransferType::Write);
+    }
     return transaction_control_with_data_transfer_using_the_dat_line_without_dma(
         SD::CommandIndex::WriteSingleBlock,
         block_address,
-        1,
-        512,
+        block_count,
+        BLOCK_LEN,
         in,
         DataTransferType::Write);
 }
