@@ -101,11 +101,11 @@ public:
 
 private:
     mutable NonnullRefPtr<BlockBasedFileSystem> m_fs;
+    NonnullOwnPtr<KBuffer> m_cached_block_data;
+    NonnullOwnPtr<KBuffer> m_entries;
     mutable IntrusiveList<&CacheEntry::list_node> m_dirty_list;
     mutable IntrusiveList<&CacheEntry::list_node> m_clean_list;
     mutable HashMap<BlockBasedFileSystem::BlockIndex, CacheEntry*> m_hash;
-    NonnullOwnPtr<KBuffer> m_cached_block_data;
-    NonnullOwnPtr<KBuffer> m_entries;
 };
 
 BlockBasedFileSystem::BlockBasedFileSystem(OpenFileDescription& file_description)
